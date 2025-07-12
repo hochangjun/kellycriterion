@@ -4,13 +4,12 @@ A interactive demonstration of why positive expected value games can still lead 
 
 ## Files
 
-- **jackpot-paradox-minimal.html** - Modern single-file implementation with dark theme and tabbed interface
-- **index.html** - Original simple implementation  
+- **index.html** - Modern single-file implementation with dark theme and tabbed interface
 - **v0-prompt.md** - Development notes
 
 ## Demo
 
-Open `jackpot-paradox-minimal.html` in your browser to explore the paradox.
+Open `index.html` in your browser to explore the paradox.
 
 ## Key Insights
 
