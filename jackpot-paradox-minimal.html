@@ -500,7 +500,7 @@
                 </div>
                 <div class="control-group">
                     <label for="betSize">Bet Size (% of wealth)</label>
-                    <input type="number" id="betSize" value="100" min="1" max="100" step="1" onchange="updateBetSizeDisplay()">
+                    <input type="number" id="betSize" value="100" min="1" max="100" step="1">
                 </div>
             </div>
 
@@ -536,10 +536,6 @@
                     $<span id="currentWealth">1,000</span>
                 </div>
                 <div class="flip-result" id="flipResult">🪙</div>
-                
-                <div style="text-align: center; margin: 1rem 0; color: #94a3b8; font-size: 0.9rem;">
-                    Betting <span id="currentBetSize">100</span>% of wealth per flip
-                </div>
                 
                 <div class="game-controls">
                     <button id="flipOnce" onclick="flipCoinOnce()">🎲 Flip Coin</button>
@@ -583,7 +579,7 @@
                     <div class="control-group">
                         <label for="wealthPref">Wealth Preference</label>
                         <select id="wealthPref">
-                            <option value="none">None (Always bet 100%)</option>
+                            <option value="none">YOLO (Always bet 100%)</option>
                             <option value="log">Log (Kelly Criterion)</option>
                             <option value="linear">Linear (Fixed %)</option>
                         </select>
@@ -757,11 +753,6 @@
             
             // Store Kelly fraction for use in simulation
             window.kellyFraction = kellyFraction;
-        }
-
-        function updateBetSizeDisplay() {
-            const betSize = document.getElementById('betSize').value;
-            document.getElementById('currentBetSize').textContent = betSize;
         }
 
         function flipCoinOnce() {
