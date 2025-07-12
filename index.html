@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Jackpot Paradox</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .game-rules {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input[type="number"], select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 30px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        #chartContainer {
+            margin-top: 30px;
+            position: relative;
+            height: 400px;
+        }
+        .single-player {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .flip-result {
+            font-size: 48px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .wealth-display {
+            text-align: center;
+            font-size: 24px;
+            margin: 10px 0;
+        }
+        .explanation {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #ffc107;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>The Jackpot Paradox</h1>
+    <p class="subtitle">Why positive expected value can still lead to ruin</p>
+
+    <div class="container">
+        <div class="game-rules">
+            <h2>The Coin Flip Game</h2>
+            <p>You start with $1,000. Configure your game:</p>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="headsProb">Heads Probability (%)</label>
+                    <input type="number" id="headsProb" value="50" min="0" max="100" step="1" onchange="updateProbabilities()">
+                </div>
+                <div class="control-group">
+                    <label for="tailsProb">Tails Probability (%)</label>
+                    <input type="number" id="tailsProb" value="50" min="0" max="100" step="1" readonly>
+                </div>
+                <div class="control-group">
+                    <label for="headsMultiplier">Heads Multiplier</label>
+                    <input type="number" id="headsMultiplier" value="2.0" min="0.1" max="10" step="0.1" onchange="updateCalculations()">
+                </div>
+                <div class="control-group">
+                    <label for="tailsMultiplier">Tails Multiplier</label>
+                    <input type="number" id="tailsMultiplier" value="0.4" min="0.01" max="1" step="0.01" onchange="updateCalculations()">
+                </div>
+                <div class="control-group">
+                    <label for="betSize">Bet Size (% of wealth)</label>
+                    <input type="number" id="betSize" value="100" min="1" max="100" step="1">
+                </div>
+            </div>
+            <div id="calculations">
+                <p><strong>Expected Value:</strong> <span id="expectedValue">+20%</span> per flip</p>
+                <p><strong>Geometric Mean:</strong> <span id="geometricMean">-10.6%</span> per flip</p>
+            </div>
+        </div>
+
+        <h3>Run Simulation</h3>
+        <div class="controls">
+            <div class="control-group">
+                <label for="numPlayers">Number of Players</label>
+                <input type="number" id="numPlayers" value="1000" min="100" max="10000">
+            </div>
+            <div class="control-group">
+                <label for="numFlips">Number of Flips</label>
+                <input type="number" id="numFlips" value="100" min="10" max="1000">
+            </div>
+            <div class="control-group">
+                <label for="wealthPref">Wealth Preference</label>
+                <select id="wealthPref">
+                    <option value="none">None (Always bet 100%)</option>
+                    <option value="log">Log (Kelly Criterion)</option>
+                    <option value="linear">Linear (Fixed %)</option>
+                </select>
+            </div>
+        </div>
+        <button id="runSimulation" onclick="runSimulation()">Run Simulation</button>
+
+        <div class="results" id="results" style="display: none;">
+            <h3>Results</h3>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="survivorCount">0</div>
+                    <div class="stat-label">Breakeven (≥ $1k)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="brokeCount">0</div>
+                    <div class="stat-label">Broke (&lt; $1)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="medianWealth">$0</div>
+                    <div class="stat-label">Median Wealth</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="meanWealth">$0</div>
+                    <div class="stat-label">Mean Wealth</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="jackpotCount">0</div>
+                    <div class="stat-label">Jackpots (&gt; $1M)</div>
+                </div>
+            </div>
+            <div id="chartContainer">
+                <canvas id="wealthChart"></canvas>
+            </div>
+        </div>
+
+        <div class="single-player">
+            <h3>Try It Yourself</h3>
+            <div class="wealth-display">
+                Current Wealth: $<span id="currentWealth">1,000</span>
+            </div>
+            <div class="flip-result" id="flipResult">🪙</div>
+            <button id="flipOnce" onclick="flipCoinOnce()">Flip Coin</button>
+            <button id="reset" onclick="resetSinglePlayer()">Reset</button>
+            <div id="flipHistory"></div>
+        </div>
+
+        <div class="explanation">
+            <h3>Understanding the Paradox</h3>
+            <p>Even though each flip has a positive expected value (+20%), the geometric mean is negative. This happens because:</p>
+            <ul>
+                <li>Multiplicative losses hurt more than equivalent gains help</li>
+                <li>You need 570 heads out of 1000 flips just to break even!</li>
+                <li>All the expected value is concentrated in extremely rare jackpot outcomes</li>
+            </ul>
+            <p><strong>Kelly Criterion:</strong> The optimal bet size for this game is 25% of your wealth per flip, not 100%!</p>
+        </div>
+    </div>
+
+    <script>
+        let currentWealth = 1000;
+        let flipCount = 0;
+        let chart = null;
+
+        function updateProbabilities() {
+            const headsProb = parseFloat(document.getElementById('headsProb').value);
+            document.getElementById('tailsProb').value = (100 - headsProb).toFixed(0);
+            updateCalculations();
+        }
+
+        function updateCalculations() {
+            const headsProb = parseFloat(document.getElementById('headsProb').value) / 100;
+            const tailsProb = 1 - headsProb;
+            const headsMultiplier = parseFloat(document.getElementById('headsMultiplier').value);
+            const tailsMultiplier = parseFloat(document.getElementById('tailsMultiplier').value);
+            
+            // Expected Value calculation
+            const headsGain = headsMultiplier - 1;
+            const tailsLoss = 1 - tailsMultiplier;
+            const ev = (headsProb * headsGain) - (tailsProb * tailsLoss);
+            const evPercent = (ev * 100).toFixed(1);
+            
+            // Geometric Mean calculation
+            const geoMean = Math.pow(headsMultiplier, headsProb) * Math.pow(tailsMultiplier, tailsProb);
+            const geoMeanPercent = ((geoMean - 1) * 100).toFixed(1);
+            
+            document.getElementById('expectedValue').textContent = `${evPercent >= 0 ? '+' : ''}${evPercent}%`;
+            document.getElementById('geometricMean').textContent = `${geoMeanPercent >= 0 ? '+' : ''}${geoMeanPercent}%`;
+            
+            // Update Kelly Criterion bet size
+            if (ev > 0) {
+                const kellyFraction = (headsProb * headsGain - tailsProb * tailsLoss) / headsGain;
+                // Store Kelly fraction for use in simulation
+                window.kellyFraction = Math.max(0, Math.min(1, kellyFraction));
+            } else {
+                window.kellyFraction = 0;
+            }
+        }
+
+        function flipCoinOnce() {
+            const headsProb = parseFloat(document.getElementById('headsProb').value) / 100;
+            const headsMultiplier = parseFloat(document.getElementById('headsMultiplier').value);
+            const tailsMultiplier = parseFloat(document.getElementById('tailsMultiplier').value);
+            const betSizePercent = parseFloat(document.getElementById('betSize').value) / 100;
+            
+            const isHeads = Math.random() < headsProb;
+            const flipResult = document.getElementById('flipResult');
+            const wealthDisplay = document.getElementById('currentWealth');
+            
+            if (isHeads) {
+                currentWealth = currentWealth * (1 - betSizePercent) + currentWealth * betSizePercent * headsMultiplier;
+                flipResult.textContent = '🟢';
+            } else {
+                currentWealth = currentWealth * (1 - betSizePercent) + currentWealth * betSizePercent * tailsMultiplier;
+                flipResult.textContent = '🔴';
+            }
+            
+            flipCount++;
+            wealthDisplay.textContent = currentWealth.toFixed(2);
+            
+            const history = document.getElementById('flipHistory');
+            const headsPercent = ((headsMultiplier - 1) * 100).toFixed(0);
+            const tailsPercent = ((1 - tailsMultiplier) * 100).toFixed(0);
+            history.innerHTML = `<p>Flip ${flipCount}: ${isHeads ? `Heads (+${headsPercent}%)` : `Tails (-${tailsPercent}%)`}</p>` + history.innerHTML;
+            
+            if (currentWealth < 0.01) {
+                document.getElementById('flipOnce').disabled = true;
+                flipResult.textContent = '💀';
+            }
+        }
+
+        function resetSinglePlayer() {
+            currentWealth = 1000;
+            flipCount = 0;
+            document.getElementById('currentWealth').textContent = '1,000';
+            document.getElementById('flipResult').textContent = '🪙';
+            document.getElementById('flipHistory').innerHTML = '';
+            document.getElementById('flipOnce').disabled = false;
+        }
+
+        function runSimulation() {
+            const numPlayers = parseInt(document.getElementById('numPlayers').value);
+            const numFlips = parseInt(document.getElementById('numFlips').value);
+            const wealthPref = document.getElementById('wealthPref').value;
+            
+            const button = document.getElementById('runSimulation');
+            button.disabled = true;
+            button.textContent = 'Running...';
+            
+            setTimeout(() => {
+                const results = simulateGame(numPlayers, numFlips, wealthPref);
+                displayResults(results);
+                button.disabled = false;
+                button.textContent = 'Run Simulation';
+            }, 100);
+        }
+
+        function simulateGame(numPlayers, numFlips, wealthPref) {
+            const players = [];
+            
+            for (let i = 0; i < numPlayers; i++) {
+                let wealth = 1000;
+                const wealthHistory = [wealth];
+                
+                for (let flip = 0; flip < numFlips; flip++) {
+                    if (wealth < 0.01) break;
+                    
+                    const headsProb = parseFloat(document.getElementById('headsProb').value) / 100;
+                    const headsMultiplier = parseFloat(document.getElementById('headsMultiplier').value);
+                    const tailsMultiplier = parseFloat(document.getElementById('tailsMultiplier').value);
+                    
+                    let betSize = 1.0;
+                    if (wealthPref === 'log') {
+                        betSize = window.kellyFraction || 0.25; // Use calculated Kelly fraction
+                    } else if (wealthPref === 'linear') {
+                        betSize = 0.5; // Fixed 50% bet
+                    }
+                    
+                    const isHeads = Math.random() < headsProb;
+                    if (isHeads) {
+                        wealth = wealth * (1 - betSize) + wealth * betSize * headsMultiplier;
+                    } else {
+                        wealth = wealth * (1 - betSize) + wealth * betSize * tailsMultiplier;
+                    }
+                    
+                    wealthHistory.push(wealth);
+                }
+                
+                players.push({
+                    finalWealth: wealth,
+                    wealthHistory: wealthHistory
+                });
+            }
+            
+            return players;
+        }
+
+        function displayResults(players) {
+            const finalWealths = players.map(p => p.finalWealth).sort((a, b) => a - b);
+            const breakeven = finalWealths.filter(w => w >= 1000).length;
+            const broke = finalWealths.filter(w => w < 1).length;
+            const jackpots = finalWealths.filter(w => w > 1000000).length;
+            const median = finalWealths[Math.floor(finalWealths.length / 2)];
+            const mean = finalWealths.reduce((a, b) => a + b, 0) / finalWealths.length;
+            
+            document.getElementById('survivorCount').textContent = breakeven;
+            document.getElementById('brokeCount').textContent = broke;
+            document.getElementById('medianWealth').textContent = '$' + median.toFixed(2);
+            document.getElementById('meanWealth').textContent = '$' + mean.toFixed(0);
+            document.getElementById('jackpotCount').textContent = jackpots;
+            
+            // Create wealth distribution chart
+            const ctx = document.getElementById('wealthChart').getContext('2d');
+            
+            if (chart) {
+                chart.destroy();
+            }
+            
+            // Calculate median wealth at each time step
+            const numFlips = players[0].wealthHistory.length;
+            const medianWealth = [];
+            for (let i = 0; i < numFlips; i++) {
+                const wealthsAtFlip = players.map(player => player.wealthHistory[i]).sort((a, b) => a - b);
+                const mid = Math.floor(wealthsAtFlip.length / 2);
+                const median = wealthsAtFlip.length % 2 !== 0 
+                    ? wealthsAtFlip[mid] 
+                    : (wealthsAtFlip[mid - 1] + wealthsAtFlip[mid]) / 2;
+                medianWealth.push(median);
+            }
+            
+            // Sample some player paths for visualization
+            const sampleSize = Math.min(50, players.length);
+            const sampledPlayers = [];
+            for (let i = 0; i < sampleSize; i++) {
+                sampledPlayers.push(players[Math.floor(Math.random() * players.length)]);
+            }
+            
+            const datasets = sampledPlayers.map((player, index) => ({
+                label: `Player ${index + 1}`,
+                data: player.wealthHistory,
+                borderColor: player.finalWealth > 1000 ? 'rgba(52, 152, 219, 0.1)' : 'rgba(231, 76, 60, 0.1)',
+                borderWidth: 1,
+                fill: false,
+                pointRadius: 0,
+                tension: 0.1
+            }));
+            
+            // Add median line
+            datasets.push({
+                label: 'Median Wealth',
+                data: medianWealth,
+                borderColor: 'rgba(255, 206, 86, 1)',
+                backgroundColor: 'rgba(255, 206, 86, 0.1)',
+                borderWidth: 3,
+                fill: false,
+                pointRadius: 0,
+                tension: 0.1
+            });
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: sampledPlayers[0].wealthHistory.length}, (_, i) => i),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Wealth Paths (Sample of 50 Players + Median)'
+                        },
+                        legend: {
+                            display: true,
+                            labels: {
+                                filter: function(item, chart) {
+                                    // Only show the Median Wealth in legend
+                                    return item.text === 'Median Wealth';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'logarithmic',
+                            title: {
+                                display: true,
+                                text: 'Wealth ($)'
+                            },
+                            min: 0.1,
+                            max: 1000000
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Number of Flips'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            document.getElementById('results').style.display = 'block';
+        }
+        
+        // Initialize calculations on page load
+        window.addEventListener('load', updateCalculations);
+    </script>
+</body>
+</html>
