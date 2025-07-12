@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelly Criterion Trading Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #ffffff;
+            background: #0f172a;
+            min-height: 100vh;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            position: relative;
+            padding: 4rem 2rem;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #10b981, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            margin-bottom: 2rem;
+        }
+
+        .nav-link {
+            color: #10b981;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 1rem;
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border: 1px solid #10b981;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: #10b981;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .icon {
+            width: 1.25rem;
+            height: 1.25rem;
+            color: #10b981;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        input[type="number"] {
+            padding: 0.75rem;
+            background: #334155;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            color: #f1f5f9;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        input[readonly] {
+            background: #475569;
+            color: #94a3b8;
+        }
+
+        button {
+            background: linear-gradient(45deg, #10b981, #06b6d4);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .calculations {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 1.5rem 0;
+            border-top: 1px solid #334155;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #94a3b8;
+        }
+
+        .emerald { color: #10b981; }
+        .red { color: #ef4444; }
+        .cyan { color: #06b6d4; }
+        .yellow { color: #eab308; }
+        .purple { color: #a855f7; }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+            
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .explanation {
+            background: rgba(16, 185, 129, 0.1);
+            color: #e2e8f0;
+            border-left: 4px solid #10b981;
+            margin-top: 2rem;
+            border-radius: 8px;
+        }
+
+        .explanation h3 {
+            color: #10b981;
+            margin-bottom: 1rem;
+        }
+
+        .explanation ul {
+            margin: 1rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .explanation li {
+            margin-bottom: 0.5rem;
+        }
+
+        .risk-warning {
+            background: rgba(239, 68, 68, 0.1);
+            color: #e2e8f0;
+            border-left: 4px solid #ef4444;
+            margin-top: 1rem;
+            border-radius: 8px;
+        }
+
+        .risk-warning h3 {
+            color: #ef4444;
+            margin-bottom: 1rem;
+        }
+
+        .risk-warning ul {
+            margin: 1rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .risk-warning li {
+            margin-bottom: 0.5rem;
+        }
+
+        .position-summary {
+            background: #334155;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .position-summary h4 {
+            color: #10b981;
+            margin-bottom: 1rem;
+        }
+
+        .position-summary .position-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            padding: 0.25rem 0;
+            border-bottom: 1px solid #475569;
+        }
+
+        .position-summary .position-row:last-child {
+            border-bottom: none;
+            font-weight: 600;
+            color: #10b981;
+        }
+
+        .hidden { display: none; }
+        .block { display: block; }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div class="hero-content">
+            <h1>📊 Trading Position Calculator</h1>
+            <p>Calculate optimal position sizes using the Kelly Criterion for trading</p>
+            <a href="index.html" class="nav-link">← Back to Jackpot Paradox</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Trading Setup -->
+        <div class="card">
+            <div class="card-header">
+                <span class="icon">💰</span>
+                <h2 class="card-title">Trade Setup</h2>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="currentPrice">Current Price ($)</label>
+                    <input type="number" id="currentPrice" value="100" min="0.01" step="0.01" onchange="calculatePosition()">
+                </div>
+                <div class="control-group">
+                    <label for="takeProfitPrice">Take Profit Price ($)</label>
+                    <input type="number" id="takeProfitPrice" value="120" min="0.01" step="0.01" onchange="calculatePosition()">
+                </div>
+                <div class="control-group">
+                    <label for="stopLossPrice">Stop Loss Price ($)</label>
+                    <input type="number" id="stopLossPrice" value="90" min="0.01" step="0.01" onchange="calculatePosition()">
+                </div>
+                <div class="control-group">
+                    <label for="portfolioSize">Portfolio Size ($)</label>
+                    <input type="number" id="portfolioSize" value="10000" min="1" step="1" onchange="calculatePosition()">
+                </div>
+                <div class="control-group">
+                    <label for="probTP">Probability of hitting TP (%)</label>
+                    <input type="number" id="probTP" value="60" min="0" max="100" step="1" onchange="updateProbabilities()">
+                </div>
+                <div class="control-group">
+                    <label for="probSL">Probability of hitting SL (%)</label>
+                    <input type="number" id="probSL" value="40" min="0" max="100" step="1" readonly>
+                </div>
+            </div>
+
+            <div class="calculations">
+                <div class="stat-item">
+                    <div class="stat-value emerald" id="expectedValue">+0.0%</div>
+                    <div class="stat-label">Expected Return</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value cyan" id="riskRewardRatio">1:1</div>
+                    <div class="stat-label">Risk:Reward Ratio</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value yellow" id="kellyFraction">0%</div>
+                    <div class="stat-label">Kelly Fraction</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value purple" id="optimalPositionSize">$0</div>
+                    <div class="stat-label">Optimal Position Size</div>
+                </div>
+            </div>
+
+            <!-- Trade Recommendation -->
+            <div id="tradeRecommendation" class="risk-warning" style="display: none; margin-top: 1rem;">
+                <h3>⚠️ Trade Not Recommended</h3>
+                <p>This trade has negative expected value. Consider improving:</p>
+                <ul id="suggestions">
+                    <li>Better risk:reward ratio (adjust TP/SL levels)</li>
+                    <li>Higher win probability (need better setup/analysis)</li>
+                    <li>Different trade opportunity entirely</li>
+                </ul>
+            </div>
+
+            <div id="tradeApproved" class="explanation" style="display: none; margin-top: 1rem;">
+                <h3>✅ Trade Approved</h3>
+                <p>This trade has positive expected value according to Kelly Criterion. Position size calculated for optimal long-term growth.</p>
+            </div>
+        </div>
+
+        <div class="two-column">
+            <!-- Position Summary -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="icon">📋</span>
+                    <h2 class="card-title">Position Summary</h2>
+                </div>
+                
+                <div class="position-summary">
+                    <h4>Trade Details</h4>
+                    <div class="position-row">
+                        <span>Entry Price:</span>
+                        <span id="summaryEntry">$100.00</span>
+                    </div>
+                    <div class="position-row">
+                        <span>Take Profit:</span>
+                        <span id="summaryTP">$120.00</span>
+                    </div>
+                    <div class="position-row">
+                        <span>Stop Loss:</span>
+                        <span id="summarySL">$90.00</span>
+                    </div>
+                    <div class="position-row">
+                        <span>Potential Gain:</span>
+                        <span id="summaryGain" class="emerald">+$2,000</span>
+                    </div>
+                    <div class="position-row">
+                        <span>Potential Loss:</span>
+                        <span id="summaryLoss" class="red">-$1,000</span>
+                    </div>
+                    <div class="position-row">
+                        <span>Position Size:</span>
+                        <span id="summarySize">$1,000</span>
+                    </div>
+                </div>
+
+                <button onclick="calculatePosition()" style="width: 100%; margin-top: 1rem;">
+                    🔄 Recalculate
+                </button>
+            </div>
+
+            <!-- Risk Analysis -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="icon">⚠️</span>
+                    <h2 class="card-title">Risk Analysis</h2>
+                </div>
+                
+                <div class="calculations">
+                    <div class="stat-item">
+                        <div class="stat-value emerald" id="maxGain">+$0</div>
+                        <div class="stat-label">Max Gain</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value red" id="maxLoss">-$0</div>
+                        <div class="stat-label">Max Loss</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value yellow" id="riskPercent">0.0%</div>
+                        <div class="stat-label">Portfolio Risk</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value cyan" id="winRate">60%</div>
+                        <div class="stat-label">Win Rate</div>
+                    </div>
+                </div>
+
+                <div class="risk-warning">
+                    <h3>⚠️ Risk Warning</h3>
+                    <p>Trading involves substantial risk. The Kelly Criterion provides a mathematical framework but doesn't guarantee profits. Consider:</p>
+                    <ul>
+                        <li>Market conditions can change rapidly</li>
+                        <li>Probability estimates may be inaccurate</li>
+                        <li>Never risk more than you can afford to lose</li>
+                        <li>Consider diversification across multiple trades</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Educational Section -->
+        <div class="card explanation">
+            <div class="card-header">
+                <span class="icon">📚</span>
+                <h2 class="card-title">How Kelly Criterion Works for Trading</h2>
+            </div>
+            
+            <h3>Kelly Formula for Trading</h3>
+            <p>The Kelly Criterion calculates the optimal fraction of your portfolio to risk on a trade:</p>
+            <p><strong>f* = (bp - q) / b</strong></p>
+            <ul>
+                <li><strong>f*</strong> = fraction of portfolio to bet (Kelly fraction)</li>
+                <li><strong>b</strong> = odds received on the wager (reward/risk ratio)</li>
+                <li><strong>p</strong> = probability of winning</li>
+                <li><strong>q</strong> = probability of losing (1 - p)</li>
+            </ul>
+
+            <h3>Trading Application</h3>
+            <ul>
+                <li><strong>Reward/Risk Ratio:</strong> (TP Price - Entry Price) / (Entry Price - SL Price)</li>
+                <li><strong>Win Probability:</strong> Your estimate based on analysis</li>
+                <li><strong>Position Size:</strong> Kelly Fraction × Portfolio Size / Risk per Share</li>
+            </ul>
+
+            <h3>Key Benefits</h3>
+            <ul>
+                <li>Maximizes long-term growth while managing risk</li>
+                <li>Prevents over-leveraging on individual trades</li>
+                <li>Provides mathematical basis for position sizing</li>
+                <li>Adapts to different risk/reward scenarios</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function updateProbabilities() {
+            const probTP = parseFloat(document.getElementById('probTP').value);
+            document.getElementById('probSL').value = (100 - probTP).toFixed(0);
+            calculatePosition();
+        }
+
+        function calculatePosition() {
+            const currentPrice = parseFloat(document.getElementById('currentPrice').value);
+            const takeProfitPrice = parseFloat(document.getElementById('takeProfitPrice').value);
+            const stopLossPrice = parseFloat(document.getElementById('stopLossPrice').value);
+            const portfolioSize = parseFloat(document.getElementById('portfolioSize').value);
+            const probTP = parseFloat(document.getElementById('probTP').value) / 100;
+            const probSL = 1 - probTP;
+
+            // Validation
+            if (takeProfitPrice <= currentPrice || stopLossPrice >= currentPrice) {
+                alert('Invalid price setup. TP must be > current price and SL must be < current price for long position.');
+                return;
+            }
+
+            // Calculate gains and losses per share
+            const gainPerShare = takeProfitPrice - currentPrice;
+            const lossPerShare = currentPrice - stopLossPrice;
+            
+            // Risk/Reward ratio
+            const riskRewardRatio = gainPerShare / lossPerShare;
+            
+            // Expected return per dollar risked
+            const expectedReturn = (probTP * riskRewardRatio) - (probSL * 1);
+            
+            // Kelly fraction calculation - proper formula: f* = (bp - q) / b
+            let kellyFraction = 0;
+            if (expectedReturn > 0) {
+                kellyFraction = (probTP * riskRewardRatio - probSL) / riskRewardRatio;
+                kellyFraction = Math.max(0, Math.min(1, kellyFraction)); // Cap between 0 and 1
+            }
+            
+            // Calculate position size
+            const riskAmount = portfolioSize * kellyFraction;
+            const positionSize = Math.floor(riskAmount / lossPerShare);
+            const actualRiskAmount = positionSize * lossPerShare;
+            
+            // Calculate potential gains and losses
+            const potentialGain = positionSize * gainPerShare;
+            const potentialLoss = positionSize * lossPerShare;
+            
+            // Update display
+            document.getElementById('expectedValue').textContent = `${expectedReturn >= 0 ? '+' : ''}${(expectedReturn * 100).toFixed(1)}%`;
+            document.getElementById('riskRewardRatio').textContent = `1:${riskRewardRatio.toFixed(2)}`;
+            document.getElementById('kellyFraction').textContent = `${(kellyFraction * 100).toFixed(1)}%`;
+            document.getElementById('optimalPositionSize').textContent = `$${riskAmount.toFixed(0)}`;
+            
+            // Update summary
+            document.getElementById('summaryEntry').textContent = `$${currentPrice.toFixed(2)}`;
+            document.getElementById('summaryTP').textContent = `$${takeProfitPrice.toFixed(2)}`;
+            document.getElementById('summarySL').textContent = `$${stopLossPrice.toFixed(2)}`;
+            document.getElementById('summaryGain').textContent = `+$${potentialGain.toFixed(0)}`;
+            document.getElementById('summaryLoss').textContent = `-$${potentialLoss.toFixed(0)}`;
+            document.getElementById('summarySize').textContent = `$${riskAmount.toFixed(0)} (${positionSize} shares)`;
+            
+            // Update risk analysis
+            document.getElementById('maxGain').textContent = `+$${potentialGain.toFixed(0)}`;
+            document.getElementById('maxLoss').textContent = `-$${potentialLoss.toFixed(0)}`;
+            document.getElementById('riskPercent').textContent = `${(actualRiskAmount / portfolioSize * 100).toFixed(1)}%`;
+            document.getElementById('winRate').textContent = `${(probTP * 100).toFixed(0)}%`;
+            
+            // Color coding for expected value
+            const evElement = document.getElementById('expectedValue');
+            if (expectedReturn > 0) {
+                evElement.className = 'stat-value emerald';
+            } else {
+                evElement.className = 'stat-value red';
+            }
+            
+            // Show/hide trade recommendations
+            const tradeRecommendation = document.getElementById('tradeRecommendation');
+            const tradeApproved = document.getElementById('tradeApproved');
+            const suggestions = document.getElementById('suggestions');
+            
+            if (expectedReturn <= 0 || kellyFraction === 0) {
+                tradeRecommendation.style.display = 'block';
+                tradeApproved.style.display = 'none';
+                
+                // Add specific suggestions based on the problem
+                let suggestionsList = [];
+                if (riskRewardRatio < 1) {
+                    suggestionsList.push(`Improve risk:reward ratio (currently 1:${riskRewardRatio.toFixed(2)}, aim for 1:1.5+)`);
+                }
+                if (probTP < 0.6) {
+                    suggestionsList.push(`Increase win probability (currently ${(probTP * 100).toFixed(0)}%, aim for 60%+)`);
+                }
+                if (expectedReturn <= 0) {
+                    const breakEvenProb = (1 / (1 + riskRewardRatio) * 100).toFixed(0);
+                    suggestionsList.push(`Need ${breakEvenProb}%+ win rate to break even with current risk:reward`);
+                }
+                
+                suggestions.innerHTML = suggestionsList.map(s => `<li>${s}</li>`).join('');
+            } else {
+                tradeRecommendation.style.display = 'none';
+                tradeApproved.style.display = 'block';
+            }
+        }
+
+        // Initialize calculations on page load
+        window.addEventListener('load', calculatePosition);
+    </script>
+</body>
+</html>
