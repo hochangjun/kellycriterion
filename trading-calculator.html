@@ -515,8 +515,12 @@
             // Risk/Reward ratio
             const riskRewardRatio = gainPerShare / lossPerShare;
             
-            // Expected return per dollar risked
-            const expectedReturn = (probTP * riskRewardRatio) - (probSL * 1);
+            // Calculate percentage gains and losses
+            const gainPercent = gainPerShare / currentPrice;
+            const lossPercent = lossPerShare / currentPrice;
+            
+            // Expected return calculation: (prob_win * gain%) - (prob_loss * loss%)
+            const expectedReturn = (probTP * gainPercent) - (probSL * lossPercent);
             
             // Kelly fraction calculation - proper formula: f* = (bp - q) / b
             let kellyFraction = 0;
